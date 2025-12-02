@@ -28,19 +28,29 @@ app.use(helmet());
 
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+
+// Orígenes permitidos para apps móviles
+const mobileOrigins = [
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://localhost',
+  'https://localhost'
+];
+
 app.use(cors({
   origin: (origin, callback) => {
     // Permitir requests sin origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    // Permitir orígenes configurados y móviles
+    if (allowedOrigins.includes(origin) || mobileOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
