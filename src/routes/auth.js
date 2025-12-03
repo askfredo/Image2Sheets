@@ -1,6 +1,6 @@
 import express from 'express';
 import { query } from '../config/database.js';
-import { verifyGoogleToken, generateToken, authenticateToken } from '../middleware/auth.js';
+import { verifyGoogleToken, verifyFirebaseToken, generateToken, authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -19,8 +19,22 @@ router.post('/google', async (req, res) => {
       });
     }
 
-    // Verificar token de Google
-    const googleUser = await verifyGoogleToken(credential);
+    // Verificar token (intentar primero Firebase, luego Google OAuth)
+    let googleUser;
+    try {
+      // Intentar verificar como token de Firebase (desde app móvil)
+      googleUser = await verifyFirebaseToken(credential);
+      console.log('✅ Token de Firebase verificado');
+    } catch (firebaseError) {
+      try {
+        // Si falla, intentar como token de Google OAuth (desde web)
+        googleUser = await verifyGoogleToken(credential);
+        console.log('✅ Token de Google OAuth verificado');
+      } catch (googleError) {
+        console.error('❌ Error al verificar ambos tipos de token:', { firebaseError, googleError });
+        throw new Error('Token inválido');
+      }
+    }
 
     // Buscar o crear usuario en la base de datos
     let result = await query(

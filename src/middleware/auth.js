@@ -1,11 +1,19 @@
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
+import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Inicializar Firebase Admin (solo si no está inicializado)
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: process.env.FIREBASE_PROJECT_ID || 'image2sheets'
+  });
+}
 
 /**
  * Middleware para verificar JWT token
@@ -62,6 +70,27 @@ export const requirePremium = (req, res, next) => {
   }
 
   next();
+};
+
+/**
+ * Verifica un token de Firebase ID
+ * @param {string} token - Token de Firebase
+ * @returns {Promise<Object>} - Payload del token
+ */
+export const verifyFirebaseToken = async (token) => {
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    return {
+      googleId: decodedToken.uid,
+      email: decodedToken.email,
+      name: decodedToken.name || decodedToken.email?.split('@')[0] || 'Usuario',
+      picture: decodedToken.picture || null,
+      emailVerified: decodedToken.email_verified
+    };
+  } catch (error) {
+    console.error('❌ Error al verificar token de Firebase:', error);
+    throw new Error('Token de Firebase inválido');
+  }
 };
 
 /**
@@ -132,6 +161,7 @@ export default {
   authenticateToken,
   requirePremium,
   verifyGoogleToken,
+  verifyFirebaseToken,
   generateToken,
   optionalAuth
 };
