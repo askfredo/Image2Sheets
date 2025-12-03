@@ -12,6 +12,7 @@ import userRoutes from './routes/users.js';
 import extractionRoutes from './routes/extractions.js';
 import billingRoutes from './routes/billing.js';
 import healthRoutes from './routes/health.js';
+import migrateRoutes from './routes/migrate.js';
 
 // Load environment variables
 dotenv.config();
@@ -85,6 +86,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/extractions', extractionRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/migrate', migrateRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
