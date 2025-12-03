@@ -6,7 +6,9 @@ import {
   extractTable,
   base64ToGeminiPart,
   validateImage,
-  analyzeTableQuality
+  analyzeTableQuality,
+  tableToMarkdown,
+  tableToCSV
 } from '../services/gemini.js';
 
 const router = express.Router();
@@ -77,7 +79,13 @@ router.post('/extract',
         message: 'Tabla extraída exitosamente',
         extraction: {
           id: extraction.id,
-          tableData,
+          tableData: {
+            ...tableData,
+            markdown: tableToMarkdown(tableData),
+            csv: tableToCSV(tableData),
+            rows: tableData.rows.length,
+            columns: tableData.headers.length
+          },
           quality,
           processingTime,
           createdAt: extraction.created_at

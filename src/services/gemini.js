@@ -109,6 +109,54 @@ Devuelve SOLO el JSON, sin explicaciones.`;
  * @param {Object} tableData - Datos de la tabla
  * @returns {Object} - Métricas de calidad
  */
+/**
+ * Convierte datos de tabla a formato Markdown
+ * @param {Object} tableData - Datos de la tabla con headers y rows
+ * @returns {string} - Tabla en formato Markdown
+ */
+export const tableToMarkdown = (tableData) => {
+  const { headers, rows } = tableData;
+
+  // Crear línea de encabezados
+  const headerLine = '| ' + headers.join(' | ') + ' |';
+
+  // Crear línea separadora
+  const separatorLine = '| ' + headers.map(() => '---').join(' | ') + ' |';
+
+  // Crear líneas de datos
+  const dataLines = rows.map(row => '| ' + row.join(' | ') + ' |');
+
+  // Combinar todo
+  return [headerLine, separatorLine, ...dataLines].join('\n');
+};
+
+/**
+ * Convierte datos de tabla a formato CSV
+ * @param {Object} tableData - Datos de la tabla con headers y rows
+ * @returns {string} - Tabla en formato CSV
+ */
+export const tableToCSV = (tableData) => {
+  const { headers, rows } = tableData;
+
+  // Función para escapar valores CSV
+  const escapeCSV = (value) => {
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  // Crear línea de encabezados
+  const headerLine = headers.map(escapeCSV).join(',');
+
+  // Crear líneas de datos
+  const dataLines = rows.map(row => row.map(escapeCSV).join(','));
+
+  // Combinar todo
+  return [headerLine, ...dataLines].join('\n');
+};
+
 export const analyzeTableQuality = (tableData) => {
   const { headers, rows } = tableData;
 
@@ -183,6 +231,8 @@ export default {
   extractTable,
   extractMultipleTables,
   analyzeTableQuality,
+  tableToMarkdown,
+  tableToCSV,
   base64ToGeminiPart,
   validateImage
 };
