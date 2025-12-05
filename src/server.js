@@ -28,7 +28,11 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
 
 // Orígenes permitidos para apps móviles
 const mobileOrigins = [
@@ -42,6 +46,11 @@ app.use(cors({
   origin: (origin, callback) => {
     // Permitir requests sin origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
+
+    // En desarrollo, permitir todos los localhost
+    if (process.env.NODE_ENV === 'development' && origin?.includes('localhost')) {
+      return callback(null, true);
+    }
 
     // Permitir orígenes configurados y móviles
     if (allowedOrigins.includes(origin) || mobileOrigins.includes(origin)) {
