@@ -1,7 +1,12 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { checkExtractionLimit, incrementExtractionCount } from '../middleware/rateLimit.js';
+import {
+  checkExtractionLimit,
+  incrementExtractionCount,
+  checkGuestRateLimit,
+  incrementGuestCount
+} from '../middleware/rateLimit.js';
 import {
   extractTable,
   base64ToGeminiPart,
@@ -12,6 +17,93 @@ import {
 } from '../services/gemini.js';
 
 const router = express.Router();
+
+/**
+ * POST /api/extractions/extract-guest
+ * Extraer tabla de una imagen (modo invitado - sin autenticación)
+ * Límite: 3 extracciones por día por IP
+ */
+router.post('/extract-guest',
+  checkGuestRateLimit,
+  async (req, res) => {
+    const startTime = Date.now();
+
+    try {
+      const { image, mimeType = 'image/png' } = req.body;
+
+      if (!image) {
+        return res.status(400).json({
+          success: false,
+          message: 'Imagen requerida'
+        });
+      }
+
+      // Validar imagen
+      const validation = validateImage(image);
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: validation.error
+        });
+      }
+
+      // Convertir a formato Gemini
+      const imagePart = base64ToGeminiPart(image, mimeType);
+
+      // Extraer tabla con Gemini AI
+      const tableData = await extractTable(imagePart);
+
+      // Analizar calidad
+      const quality = analyzeTableQuality(tableData);
+
+      const processingTime = Date.now() - startTime;
+
+      // Incrementar contador de invitado
+      await incrementGuestCount(req, res, () => {});
+
+      // Calcular uso actualizado
+      const updatedUsage = {
+        current: req.guestUsage.current + 1,
+        limit: req.guestUsage.limit,
+        remaining: req.guestUsage.remaining - 1
+      };
+
+      res.json({
+        success: true,
+        message: 'Tabla extraída exitosamente (modo invitado)',
+        extraction: {
+          id: `guest-${Date.now()}`,
+          tableData: {
+            ...tableData,
+            markdown: tableToMarkdown(tableData),
+            csv: tableToCSV(tableData),
+            rows: tableData.rows.length,
+            columns: tableData.headers.length
+          },
+          quality,
+          processingTime,
+          createdAt: new Date().toISOString()
+        },
+        guestMode: true,
+        usage: updatedUsage,
+        message_upgrade: updatedUsage.remaining === 0
+          ? 'Has usado todas tus extracciones de invitado. Inicia sesión para obtener más.'
+          : `Te quedan ${updatedUsage.remaining} extracciones de invitado.`
+      });
+
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+
+      console.error('❌ Error en /extractions/extract-guest:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al extraer tabla',
+        error: error.message,
+        guestMode: true
+      });
+    }
+  }
+);
 
 /**
  * POST /api/extractions/extract
