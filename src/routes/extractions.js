@@ -77,8 +77,8 @@ router.post('/extract-guest',
             ...tableData,
             markdown: tableToMarkdown(tableData),
             csv: tableToCSV(tableData),
-            rows: tableData.rows.length,
-            columns: tableData.headers.length
+            rowCount: tableData.rows.length,
+            columnCount: tableData.headers.length
           },
           quality,
           processingTime,
